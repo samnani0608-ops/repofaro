@@ -7,6 +7,7 @@ import sys
 
 from collections.abc import Sequence
 from pathlib import Path
+from .models import ProjectSnapshot
 
 from . import __version__
 from .scanner import scan_project
@@ -46,7 +47,7 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def print_scan_report(snapshot) -> None:
+def print_scan_report(snapshot: ProjectSnapshot) -> None:
     """Display project scan results in the terminal."""
 
     print()
