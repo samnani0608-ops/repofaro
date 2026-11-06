@@ -11,6 +11,9 @@ from .models import ProjectSnapshot
 
 from . import __version__
 from .scanner import scan_project
+from .detector import detect_technologies
+
+from .models import ProjectProfile, ProjectSnapshot
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -44,6 +47,17 @@ def build_parser() -> argparse.ArgumentParser:
         help="Path to the project directory."
     )
 
+    detect_parser = subparsers.add_parser(
+    "detect",
+    help="Detect technologies used in a project."
+)
+
+    detect_parser.add_argument(
+    "path",
+    type=Path,
+    help="Path to the project directory."
+)
+
     return parser
 
 
@@ -72,6 +86,43 @@ def print_scan_report(snapshot: ProjectSnapshot) -> None:
     print("\nScan completed successfully.")
     print()
 
+def print_detection_report(profile: ProjectProfile) -> None:
+    """Display technology detection results."""
+
+    print()
+    print("=" * 42)
+    print("             REPOFARO")
+    print("=" * 42)
+
+    print("\nTECHNOLOGY DETECTOR")
+    print("-" * 42)
+
+    print(f"Project: {profile.root}")
+
+    print("\nDETECTED TECHNOLOGIES")
+    print("-" * 42)
+
+    for detection in profile.detections:
+        print(
+            f"{detection.technology:<15} "
+            f"{detection.status.value}"
+        )
+
+    print("\nEVIDENCE")
+    print("-" * 42)
+
+    for detection in profile.detections:
+
+        if not detection.evidence:
+            continue
+
+        print(f"\n{detection.technology}:")
+
+        for evidence in detection.evidence:
+            print(f"  - {evidence}")
+
+    print("\nDetection completed successfully.")
+    print()
 
 def main(argv: Sequence[str] | None = None) -> int:
     """Main entry point of RepoFaro."""
@@ -89,6 +140,23 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 2
 
         print_scan_report(snapshot)
+
+        return 0
+
+    elif args.command == "detect":
+
+        try:
+            snapshot = scan_project(args.path)
+
+            profile = detect_technologies(snapshot)
+
+        except OSError as error:
+            print(f"RepoFaro: error: {error}", file=sys.stderr)
+            return 2
+
+        print_detection_report(profile)
+
+        return 0
 
         return 0
 
