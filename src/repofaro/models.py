@@ -70,3 +70,12 @@ class AuditContext:
 
     snapshot: ProjectSnapshot
     profile: ProjectProfile
+
+@dataclass(slots=True)
+class AuditReport:
+    """Represents the complete results of a project audit."""
+
+    snapshot: ProjectSnapshot
+    profile: ProjectProfile
+    findings: tuple[Finding, ...]
+    rules_executed: int

@@ -7,13 +7,20 @@ import sys
 
 from collections.abc import Sequence
 from pathlib import Path
-from .models import ProjectSnapshot
 
 from . import __version__
-from .scanner import scan_project
+
+from .audit import run_audit
 from .detector import detect_technologies
 
-from .models import ProjectProfile, ProjectSnapshot
+from .models import (
+    AuditReport,
+    ProjectProfile,
+    ProjectSnapshot,
+    Severity,
+)
+
+from .scanner import scan_project
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -35,7 +42,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="Available commands"
     )
 
-    # Scan command
+    # Scan command.
     scan_parser = subparsers.add_parser(
         "scan",
         help="Analyze a project's directory structure."
@@ -47,16 +54,29 @@ def build_parser() -> argparse.ArgumentParser:
         help="Path to the project directory."
     )
 
+    # Detect command.
     detect_parser = subparsers.add_parser(
-    "detect",
-    help="Detect technologies used in a project."
-)
+        "detect",
+        help="Detect technologies used in a project."
+    )
 
     detect_parser.add_argument(
-    "path",
-    type=Path,
-    help="Path to the project directory."
-)
+        "path",
+        type=Path,
+        help="Path to the project directory."
+    )
+
+    # Audit command.
+    audit_parser = subparsers.add_parser(
+        "audit",
+        help="Perform a complete project audit."
+    )
+
+    audit_parser.add_argument(
+        "path",
+        type=Path,
+        help="Path to the project directory."
+    )
 
     return parser
 
@@ -85,6 +105,7 @@ def print_scan_report(snapshot: ProjectSnapshot) -> None:
 
     print("\nScan completed successfully.")
     print()
+
 
 def print_detection_report(profile: ProjectProfile) -> None:
     """Display technology detection results."""
@@ -124,6 +145,80 @@ def print_detection_report(profile: ProjectProfile) -> None:
     print("\nDetection completed successfully.")
     print()
 
+
+def print_audit_report(report: AuditReport) -> None:
+    """Display the complete project audit report."""
+
+    print()
+    print("=" * 48)
+    print("                 REPOFARO")
+    print("=" * 48)
+
+    print("\nPROJECT AUDIT")
+    print("-" * 48)
+
+    print(f"Project: {report.snapshot.root}")
+
+    # Technology information.
+    print("\nTECHNOLOGIES")
+    print("-" * 48)
+
+    for detection in report.profile.detections:
+        print(
+            f"{detection.technology:<15} "
+            f"{detection.status.value}"
+        )
+
+    # Audit findings.
+    print("\nAUDIT FINDINGS")
+    print("-" * 48)
+
+    if not report.findings:
+        print("No findings. All registered rules passed.")
+
+    for finding in report.findings:
+
+        print(
+            f"\n[{finding.severity.value}] "
+            f"{finding.rule_id}"
+        )
+
+        print(f"Title: {finding.title}")
+        print(f"Description: {finding.description}")
+        print(f"Recommendation: {finding.recommendation}")
+
+        if finding.path is not None:
+            print(f"Path: {finding.path}")
+
+    # Calculate summary.
+    error_count = sum(
+        finding.severity == Severity.ERROR
+        for finding in report.findings
+    )
+
+    warning_count = sum(
+        finding.severity == Severity.WARNING
+        for finding in report.findings
+    )
+
+    info_count = sum(
+        finding.severity == Severity.INFO
+        for finding in report.findings
+    )
+
+    print("\nAUDIT SUMMARY")
+    print("-" * 48)
+
+    print(f"Rules executed: {report.rules_executed}")
+    print(f"Total findings: {len(report.findings)}")
+    print(f"Errors: {error_count}")
+    print(f"Warnings: {warning_count}")
+    print(f"Information: {info_count}")
+
+    print("\nAudit completed successfully.")
+    print()
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     """Main entry point of RepoFaro."""
 
@@ -136,7 +231,10 @@ def main(argv: Sequence[str] | None = None) -> int:
             snapshot = scan_project(args.path)
 
         except OSError as error:
-            print(f"RepoFaro: error: {error}", file=sys.stderr)
+            print(
+                f"RepoFaro: error: {error}",
+                file=sys.stderr
+            )
             return 2
 
         print_scan_report(snapshot)
@@ -147,16 +245,32 @@ def main(argv: Sequence[str] | None = None) -> int:
 
         try:
             snapshot = scan_project(args.path)
-
             profile = detect_technologies(snapshot)
 
         except OSError as error:
-            print(f"RepoFaro: error: {error}", file=sys.stderr)
+            print(
+                f"RepoFaro: error: {error}",
+                file=sys.stderr
+            )
             return 2
 
         print_detection_report(profile)
 
         return 0
+
+    elif args.command == "audit":
+
+        try:
+            report = run_audit(args.path)
+
+        except OSError as error:
+            print(
+                f"RepoFaro: error: {error}",
+                file=sys.stderr
+            )
+            return 2
+
+        print_audit_report(report)
 
         return 0
 
