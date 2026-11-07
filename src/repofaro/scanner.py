@@ -48,12 +48,17 @@ def scan_project(project_path: Path) -> ProjectSnapshot:
 
     root = root.resolve()
 
+    # Initialize counters and collections.
     files_count = 0
     directories_count = 0
 
     extension_counts = Counter()
 
+    root_files = []
+    root_directories = []
+
     def raise_walk_error(error: OSError) -> None:
+        """Propagate filesystem traversal errors."""
         raise error
 
     # Explore the directory tree.
@@ -74,7 +79,12 @@ def scan_project(project_path: Path) -> ProjectSnapshot:
             and not (current_path / name).is_symlink()
         ]
 
+        # Count directories found in the current location.
         directories_count += len(dirnames)
+
+        # Record directories located at the project root.
+        if current_path == root:
+            root_directories.extend(dirnames)
 
         # Process files.
         for filename in filenames:
@@ -87,6 +97,11 @@ def scan_project(project_path: Path) -> ProjectSnapshot:
 
             files_count += 1
 
+            # Record files located at the project root.
+            if current_path == root:
+                root_files.append(filename)
+
+            # Identify file extensions.
             extension = file_path.suffix.lower()
 
             if not extension:
@@ -94,9 +109,12 @@ def scan_project(project_path: Path) -> ProjectSnapshot:
 
             extension_counts[extension] += 1
 
+    # Return the collected project information.
     return ProjectSnapshot(
         root=root,
         files_count=files_count,
         directories_count=directories_count,
-        extension_counts=dict(sorted(extension_counts.items()))
+        extension_counts=dict(sorted(extension_counts.items())),
+        root_files=tuple(sorted(root_files)),
+        root_directories=tuple(sorted(root_directories))
     )

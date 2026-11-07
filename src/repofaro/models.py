@@ -15,6 +15,8 @@ class ProjectSnapshot:
     files_count: int
     directories_count: int
     extension_counts: dict[str, int]
+    root_files: tuple[str, ...]
+    root_directories: tuple[str, ...]
 
 
 class DetectionStatus(str, Enum):
@@ -40,3 +42,31 @@ class ProjectProfile:
 
     root: Path
     detections: tuple[TechnologyDetection, ...]
+
+
+class Severity(str, Enum):
+    """Severity levels for project audit findings."""
+
+    ERROR = "ERROR"
+    WARNING = "WARNING"
+    INFO = "INFO"
+
+
+@dataclass(slots=True)
+class Finding:
+    """Represents an issue or recommendation."""
+
+    rule_id: str
+    title: str
+    severity: Severity
+    description: str
+    recommendation: str
+    path: str | None = None
+
+
+@dataclass(slots=True)
+class AuditContext:
+    """Contains the information required by audit rules."""
+
+    snapshot: ProjectSnapshot
+    profile: ProjectProfile

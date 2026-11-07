@@ -138,3 +138,28 @@ def test_scan_raises_error_for_unreadable_directory(tmp_path):
 
     finally:
         restricted_dir.chmod(0o700)
+
+def test_scan_records_root_entries_only(tmp_path):
+    """Verify that root entries are recorded without nested entries."""
+
+    (tmp_path / "src").mkdir()
+    (tmp_path / "tests").mkdir()
+
+    (tmp_path / "main.py").write_text(
+        "print('Hello')",
+        encoding="utf-8"
+    )
+
+    (tmp_path / "src" / "internal.py").write_text(
+        "# Internal module",
+        encoding="utf-8"
+    )
+
+    snapshot = scan_project(tmp_path)
+
+    assert set(snapshot.root_files) == {"main.py"}
+
+    assert set(snapshot.root_directories) == {
+        "src",
+        "tests"
+    }
