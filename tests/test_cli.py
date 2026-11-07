@@ -1,7 +1,7 @@
 """
 Automated tests for the RepoFaro CLI.
 """
-
+import json
 from repofaro.cli import main
 
 
@@ -101,3 +101,51 @@ def test_detect_command_handles_missing_directory(tmp_path, capsys):
     assert exit_code == 2
     assert "Project directory does not exist" in captured.err
     assert captured.out == ""
+
+def test_audit_command_displays_report(tmp_path, capsys):
+    """Verify that the audit command displays a complete report."""
+
+    exit_code = main(["audit", str(tmp_path)])
+
+    captured = capsys.readouterr()
+
+    assert exit_code == 0
+    assert "PROJECT AUDIT" in captured.out
+    assert "AUDIT SUMMARY" in captured.out
+    assert "Rules executed: 4" in captured.out
+    assert "Total findings: 4" in captured.out
+
+
+def test_audit_command_handles_missing_directory(tmp_path, capsys):
+    """Verify that audit handles nonexistent directories."""
+
+    invalid_path = tmp_path / "missing"
+
+    exit_code = main(["audit", str(invalid_path)])
+
+    captured = capsys.readouterr()
+
+    assert exit_code == 2
+    assert "Project directory does not exist" in captured.err
+    assert captured.out == ""
+
+
+def test_audit_command_outputs_valid_json(tmp_path, capsys):
+    """Verify that audit produces valid JSON."""
+
+    exit_code = main([
+        "audit",
+        str(tmp_path),
+        "--format",
+        "json"
+    ])
+
+    captured = capsys.readouterr()
+
+    data = json.loads(captured.out)
+
+    assert exit_code == 0
+    assert data["schema_version"] == "1.0"
+    assert data["rules_executed"] == 4
+    assert data["summary"]["total_findings"] == 4
+    assert captured.err == ""

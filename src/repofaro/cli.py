@@ -12,6 +12,7 @@ from . import __version__
 
 from .audit import run_audit
 from .detector import detect_technologies
+from .reporters.json_report import render_json_report
 
 from .models import (
     AuditReport,
@@ -76,6 +77,14 @@ def build_parser() -> argparse.ArgumentParser:
         "path",
         type=Path,
         help="Path to the project directory."
+    )
+
+    audit_parser.add_argument(
+        "--format",
+        dest="output_format",
+        choices=("text", "json"),
+        default="text",
+        help="Output format: text or json."
     )
 
     return parser
@@ -225,6 +234,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
 
+    # SCAN COMMAND
     if args.command == "scan":
 
         try:
@@ -241,6 +251,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
         return 0
 
+    # DETECT COMMAND
     elif args.command == "detect":
 
         try:
@@ -258,6 +269,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
         return 0
 
+    # AUDIT COMMAND
     elif args.command == "audit":
 
         try:
@@ -270,7 +282,10 @@ def main(argv: Sequence[str] | None = None) -> int:
             )
             return 2
 
-        print_audit_report(report)
+        if args.output_format == "json":
+            print(render_json_report(report))
+
+        else:            print_audit_report(report)
 
         return 0
 
